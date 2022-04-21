@@ -12,15 +12,15 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Response time is less than 200ms\", function () {\r",
-							"    pm.expect(pm.response.responseTime).to.be.below(200);\r",
+							"pm.test(\"Response time is less than 300ms\", function () {\r",
+							"    pm.expect(pm.response.responseTime).to.be.below(300);\r",
 							"});\r",
 							"\r",
 							"pm.test(\"Status code is 200\", function () {\r",
 							"    pm.response.to.have.status(200);\r",
 							"});\r",
 							"\r",
-							"switch(utils.getStage()){\r",
+							"switch(utils.getStage(pm.environment)){\r",
 							"\r",
 							"    //Empty\r",
 							"    case 1:{\r",
@@ -39,7 +39,9 @@
 							"            var jsonData = pm.response.json();\r",
 							"            pm.expect(jsonData).to.be.an('array').that.is.not.empty;\r",
 							"            utils.advanceStage(pm.environment);\r",
+							"            postman.setNextRequest('Update Company');\r",
 							"        });\r",
+							"        break;\r",
 							"    }\r",
 							"\r",
 							"    //After Update\r",
@@ -47,8 +49,10 @@
 							"        pm.test(\"Entry Updated\", function () {\r",
 							"            var jsonData = pm.response.json();\r",
 							"            pm.expect(jsonData).to.be.an('array').that.is.not.empty;\r",
-							"            utils.advanceStage(pm.collectionVariables);\r",
+							"            utils.advanceStage(pm.environment);\r",
+							"            postman.setNextRequest('Remove Company');\r",
 							"        });\r",
+							"        break;\r",
 							"    }\r",
 							"\r",
 							"    //After Delete\r",
@@ -56,7 +60,8 @@
 							"        pm.test(\"No more entries found\", function () {\r",
 							"            var jsonData = pm.response.json();\r",
 							"            pm.expect(jsonData).to.be.an('array').that.is.empty;            \r",
-							"            utils.advanceStage(pm.collectionVariables);\r",
+							"            utils.resetStage(pm.environment);\r",
+							"            postman.setNextRequest('End');\r",
 							"        });\r",
 							"        break;\r",
 							"    }\r",
@@ -101,10 +106,15 @@
 							"    pm.response.to.have.status(201);\r",
 							"});\r",
 							"\r",
+							"pm.test('No body is present',function(){\r",
+							"     pm.response.to.not.be.withBody;\r",
+							"});\r",
+							"\r",
 							"pm.test(\"Location is present\", function () {\r",
 							"    pm.response.to.have.header(\"Location\");    \r",
 							"    pm.expect(pm.response.headers.get(\"Location\")).to.have.string('/api/companies/');\r",
 							"    utils.recordId(pm.environment,pm.response.headers.get(\"Location\").replace('/api/companies/',''));\r",
+							"    postman.setNextRequest('Get Company');\r",
 							"});"
 						],
 						"type": "text/javascript"
@@ -158,9 +168,36 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('Schema is valid', function () {\r",
-							"    pm.expect(tv4.validate(pm.response.json(), utils.entrySchema)).to.be.true;\r",
-							"});"
+							"if(utils.getStage(pm.environment) !== 4){\r",
+							"\r",
+							"    pm.test(\"Status code is 200\", function () {\r",
+							"        pm.response.to.have.status(200);\r",
+							"    });\r",
+							"\r",
+							"    pm.test(\"Response time is less than 200ms\", function () {\r",
+							"        pm.expect(pm.response.responseTime).to.be.below(200);\r",
+							"    });\r",
+							"\r",
+							"    pm.test('Schema is valid', function () {\r",
+							"        pm.expect(tv4.validate(pm.response.json(), utils.entrySchema)).to.be.true;\r",
+							"        postman.setNextRequest('List Companies');\r",
+							"    });\r",
+							"}else{\r",
+							"\r",
+							"      pm.test(\"Status code is 404\", function () {\r",
+							"        pm.response.to.have.status(404);        \r",
+							"        postman.setNextRequest('List Companies');\r",
+							"    });\r",
+							"\r",
+							"    pm.test(\"Message is correct\", function () {        \r",
+							"        pm.expect(pm.response.text()).to.be.eq(`No company with id ${pm.environment.get('ID')} found`);\r",
+							"    });\r",
+							"\r",
+							"     pm.test(\"Response time is less than 200ms\", function () {\r",
+							"        pm.expect(pm.response.responseTime).to.be.below(200);\r",
+							"    });\r",
+							"\r",
+							"}"
 						],
 						"type": "text/javascript"
 					}
@@ -186,6 +223,28 @@
 		},
 		{
 			"name": "Update Company",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 202\", function () {\r",
+							"    pm.response.to.have.status(202);\r",
+							"    postman.setNextRequest('Get Company');\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Response time is less than 200ms\", function () {\r",
+							"    pm.expect(pm.response.responseTime).to.be.below(200);\r",
+							"});\r",
+							"\r",
+							"pm.test('No body is present',function(){\r",
+							"    pm.response.to.not.be.withBody;\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "PUT",
 				"header": [],
@@ -215,6 +274,20 @@
 		},
 		{
 			"name": "Remove Company",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 204\", function () {\r",
+							"    pm.response.to.have.status(204);\r",
+							"     postman.setNextRequest('Get Company');\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "DELETE",
 				"header": [],
@@ -278,14 +351,17 @@
 					"utils = {",
 					"    listSchema,",
 					"    entrySchema,",
-					"    getStage: function () {",
-					"        const value = pm.variables.get(\"STAGE\");        ",
+					"    getStage: function (scope) {",
+					"        const value = scope.get(\"STAGE\");        ",
 					"        if(value)",
 					"            return parseInt(value);",
-					"        return parseInt(pm.environment.get(\"STAGE\"));",
+					"        return 1;",
 					"    },",
 					"    advanceStage:function(scope){",
-					"        scope.set(\"STAGE\", this.getStage()+1);",
+					"        scope.set(\"STAGE\", this.getStage(scope)+1);",
+					"    },",
+					"    resetStage:function(scope){",
+					"        this.reset(scope);",
 					"    },",
 					"    recordId:function(scope,value){",
 					"        scope.set('ID',value);",
@@ -295,6 +371,16 @@
 					"        if(!variable){",
 					"            scope.set(key,value);",
 					"        }",
+					"    },",
+					"    reset:function(scope){",
+					"        scope.unset('NAME');",
+					"        scope.unset('PERMALINK');",
+					"        scope.unset('DESCRIPTION');",
+					"        scope.unset('OVERVIEW');",
+					"        scope.unset('PHONE');",
+					"        scope.unset('EMPLOYEES');",
+					"        scope.unset('ID');",
+					"        scope.unset('STAGE');",
 					"    }",
 					"};",
 					"",
