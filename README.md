@@ -11,7 +11,7 @@ To run this demo, use the dockerized version of the project or if you're a Java 
 This dummy app can be executed through docker with the following command:
 
 ```shell
-docker run -d --name dummynewman -p 8080:8080 paulushc/devops-automation:v1.0.0
+docker run -d --name dummynewman -p 8080:8080 paulushc/devops-automation
 ```
 
 ## Newman
